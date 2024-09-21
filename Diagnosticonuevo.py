@@ -51,9 +51,6 @@ class MainWindow(tk.Tk):
         self.frame_contenido = tk.Frame(self.frame_principal, bg="white", padx=20, pady=20)
         self.frame_contenido.pack(side="left", fill="both", expand=True)
  
-        self.frame_diagnostico = tk.Frame(self.frame_contenido, bg="white")
-        self.frame_remediacion = tk.Frame(self.frame_contenido, bg="white")
-        self.frame_utilidades = tk.Frame(self.frame_contenido, bg="white")
  
  
         self.pie_pagina = tk.Label(self, text="Desarrollado por SQUAD Ingenieria SO BDB - Versión 1.0", font=("Arial", 10), bg="#4a4a4a", fg="white", pady=10)
@@ -68,71 +65,41 @@ class MainWindow(tk.Tk):
         label = tk.Label(self.frame_contenido, text=initial_message, font=("Segoe UI", 18), bg="white")
         label.pack(pady=20)
  
-    def limpiar_frame_contenido(self):
-        # Eliminar todo el contenido de los frames
-        for widget in self.frame_contenido.winfo_children():
-            widget.pack_forget()
- 
     def hilo_ejecutar_diagnostico(self):
    
         hilo_diagnostico = threading.Thread(target=self.ejecutar_diagnostico_completo)
         hilo_diagnostico.start()
  
     def mostrar_diagnostico(self):
-        # Limpiar el frame de contenido excepto 'campo_info' y 'label_estado'
-        self.limpiar_frame_contenido()
- 
-        # Verificar si `frame_diagnostico` existe, si no, crearlo
-        if not hasattr(self, 'frame_diagnostico') or not self.frame_diagnostico.winfo_exists():
-            self.frame_diagnostico = tk.Frame(self.frame_contenido, bg="white")
-       
-        # Empaquetar siempre el `frame_diagnostico`
-        self.frame_diagnostico.pack(fill="both", expand=True)
- 
-        # Obtener el nombre del host
+        for widget in self.frame_contenido.winfo_children():
+                       
+            if hasattr(self, 'campo_info')and widget == self.campo_info:
+                continue
+            if hasattr(self, 'label_estado')and widget == self.label_estado:
+                continue
+            widget.destroy()
         nombre_pc = socket.gethostname()
  
-        # Verificar si el label de estado (hostname) ya ha sido creado previamente
-        if not hasattr(self, 'label_estado'):
-            self.label_estado = tk.Label(self.frame_diagnostico, text=nombre_pc, font=("Arial", 18), bg="white", anchor="w")
-       
-        # Empaquetar siempre el label del hostname
-        self.label_estado.pack(fill="x", pady=10)
+        if not hasattr(self, 'label_estado')or not self.label_estado.winfo_exists():
+            self.label_estado = tk.Label(self.frame_contenido, text=nombre_pc, font=("Arial", 18), bg="white", anchor="w")
+            self.label_estado.pack(fill="x", pady=10)
  
-        # Verificar si `campo_info` ya ha sido creado previamente
-        if not hasattr(self, 'campo_info'):
-            self.campo_info = tk.Text(self.frame_diagnostico, height=15, bg="#e0e0e0", font=("Arial", 10))
+        if not hasattr(self, 'campo_info') or not self.campo_info.winfo_exists():
+            self.campo_info = tk.Text(self.frame_contenido, height=15, bg="#e0e0e0", font=("Arial", 10))
+            self.campo_info.pack(fill="both", expand=True, pady=10)
             self.campo_info.tag_configure('red', foreground='red')
             self.campo_info.tag_configure('green', foreground='green')
-       
-        # Volver a empaquetar el `campo_info`
-        self.campo_info.pack(fill="both", expand=True, pady=10)
  
-        # Verificar si el `frame_botones` ya ha sido creado previamente
-        if not hasattr(self, 'frame_botones') or not self.frame_botones.winfo_exists():
-            self.frame_botones = tk.Frame(self.frame_diagnostico, bg="white")
-       
-        # Empaquetar el `frame_botones`
-        self.frame_botones.pack(pady=10)
+        frame_botones = tk.Frame(self.frame_contenido, bg="white")
+        frame_botones.pack(pady=10, anchor="center")
  
-        # Verificar y crear el botón "Ejecutar Diagnóstico" si no existe
-        if not hasattr(self, 'boton_diagnostico'):
-            self.boton_diagnostico = tk.Button(self.frame_botones, text="Ejecutar Diagnóstico", command=self.hilo_ejecutar_diagnostico, bg="#4a4a4a", fg="white")
-       
-        # Empaquetar el botón "Ejecutar Diagnóstico"
-        self.boton_diagnostico.pack(side="left", pady=5, padx=10)
+        self.boton_exportar = tk.Button (frame_botones, text= "Exportar", command=self.boton_exportar_txt, bg="#4A4A4A", fg="white")
+        self.boton_exportar.grid(row=0, column=0, pady=5,padx=10)
  
-        # Verificar y crear el botón "Exportar" si no existe
-        if not hasattr(self, 'boton_exportar'):
-            self.boton_exportar = tk.Button(self.frame_botones, text="Exportar", command=self.boton_exportar_txt, bg="#4A4A4A", fg="white")
-       
-        # Empaquetar el botón "Exportar"
-        self.boton_exportar.pack(side="left", pady=5, padx=10)
- 
+        self.boton_exportar = tk.Button (frame_botones, text= "Ejecutar Diagnostico", command=self.hilo_ejecutar_diagnostico, bg="#4A4A4A", fg="white")
+        self.boton_exportar.grid(row=0, column=1, pady=5,padx=10)
  
     def ejecutar_diagnostico_completo(self):
-       
-        self.campo_info.delete(1.0, tk.END)
         try:
             # Información del sistema operativo
             self.campo_info.insert(tk.END, "DIAGNÓSTICO DE LA ESTACIÓN:\n\n\n")
@@ -276,21 +243,10 @@ class MainWindow(tk.Tk):
                 # Ping al gateway
             try:
                 resultado_gateway, _ = self.hacer_ping_exportar(gateway)
-                self.campo_info.insert(tk.END, f"Ping al gateway {gateway}: ")
-                if "Éxito" in resultado_gateway:
-                    simbolo = "✅"
-                    palabra_resultado = "Éxito"
-                    color = "green"
-                else:
-                    simbolo = "❌"
-                    palabra_resultado = "Fallo"
-                    color = "red"
-                self.campo_info.insert(tk.END, simbolo, color)
-
-                self.campo_info.insert(tk.END, f" - {palabra_resultado}\n", color)
+                color_gateway = "green" if "Éxito" in resultado_gateway else "red"
+                self.campo_info.insert(tk.END, f"Ping al gateway {gateway}: {resultado_gateway}\n", color_gateway)
             except Exception as e:
-                self.campo_info.insert(tk.END, f"❌ Error al hacer ping al gateway {gateway}: {str(e)}\n", "red")
-
+                self.campo_info.insert(tk.END, f"Error al hacer ping al gateway {gateway}: {str(e)}\n", "red")
                
             try:    
                 logonserver = self.obtener_logonserver()
@@ -600,23 +556,11 @@ class MainWindow(tk.Tk):
             return "Fallido", None
  
     def remediacion(self):
-        # Limpiar el contenido actual del frame principal
-        self.limpiar_frame_contenido()
+        for widget in self.frame_contenido.winfo_children():
+            widget.destroy()    
  
-        # Verificar si el frame de remediación existe y si no, crear uno nuevo
-        if not hasattr(self, 'frame_remediacion') or not self.frame_remediacion.winfo_exists():
-            self.frame_remediacion = tk.Frame(self.frame_contenido, bg="white")
-       
-        # Volver a empaquetar el frame_remediacion si fue limpiado antes
-        self.frame_remediacion.pack(fill="both", expand=True)
+        fondo_contenido = self.frame_contenido.cget("bg")  
  
-        # Limpiar los widgets de frame_remediacion para evitar duplicados
-        for widget in self.frame_remediacion.winfo_children():
-            widget.destroy()
- 
-        fondo_contenido = self.frame_remediacion.cget("bg")
- 
-        # Crear variables para los Checkbuttons
         self.check_aranda_var = tk.BooleanVar()
         self.check_temporales_var = tk.BooleanVar()
         self.check_proxy_var = tk.BooleanVar()
@@ -624,29 +568,23 @@ class MainWindow(tk.Tk):
         self.check_adobe_var = tk.BooleanVar()
         self.check_olimpia_var = tk.BooleanVar()
  
-        # Crear Checkbuttons dentro del frame_remediacion
-        self.check_aranda = tk.Checkbutton(self.frame_remediacion, text="Revisar Aranda", variable=self.check_aranda_var, font=("Arial", 10), bg=fondo_contenido)
-        self.check_temporales = tk.Checkbutton(self.frame_remediacion, text="Limpiar Temporales", variable=self.check_temporales_var, font=("Arial", 10), bg=fondo_contenido)
-        self.check_proxy = tk.Checkbutton(self.frame_remediacion, text="Activar/Desactivar Proxy", variable=self.check_proxy_var, font=("Arial", 10), bg=fondo_contenido)
-        self.check_pulse = tk.Checkbutton(self.frame_remediacion, text="Reparar Pulse", variable=self.check_pulse_var, font=("Arial", 10), bg=fondo_contenido)
-        self.check_adobe = tk.Checkbutton(self.frame_remediacion, text="Reparar Adobe", variable=self.check_adobe_var, font=("Arial", 10), bg=fondo_contenido)
-        self.check_olimpia = tk.Checkbutton(self.frame_remediacion, text="Reparar Olimpia", variable=self.check_olimpia_var, font=("Arial", 10), bg=fondo_contenido)
+        self.check_aranda = tk.Checkbutton(self.frame_contenido, text= "Revisar Aranda", variable= self.check_aranda_var, font=("Arial",10),bg=fondo_contenido )
+        self.check_temporales = tk.Checkbutton(self.frame_contenido, text= "Limpiar Temporales", variable= self.check_temporales_var , font=("Arial",10),bg=fondo_contenido )
+        self.check_proxy = tk.Checkbutton(self.frame_contenido, text= "Activar/Desactivar Proxy", variable= self.check_proxy_var, font=("Arial",10),bg=fondo_contenido )
+        self.check_pulse = tk.Checkbutton(self.frame_contenido, text= "Reparar Pulse", variable= self.check_pulse_var, font=("Arial",10),bg=fondo_contenido )
+        self.check_adobe = tk.Checkbutton(self.frame_contenido, text= "Reparar Adobe", variable= self.check_adobe_var, font=("Arial",10),bg=fondo_contenido )
+        self.check_olimpia = tk.Checkbutton(self.frame_contenido, text= "Reparar Olimpia", variable= self.check_olimpia_var, font=("Arial",10),bg=fondo_contenido )
  
-        # Colocar los Checkbuttons en la cuadrícula
-        self.check_aranda.grid(row=0, column=0, sticky="w", padx=20, pady=5)
-        self.check_temporales.grid(row=1, column=0, sticky="w", padx=20, pady=5)
-        self.check_proxy.grid(row=2, column=0, sticky="w", padx=20, pady=5)
-        self.check_pulse.grid(row=0, column=1, sticky="w", padx=20, pady=5)
-        self.check_adobe.grid(row=1, column=1, sticky="w", padx=20, pady=5)
+        self.check_aranda.grid(row=0, column=0, sticky="w", padx=20, pady=5)    
+        self.check_temporales.grid(row=1, column=0, sticky="w", padx=20, pady=5)    
+        self.check_proxy.grid(row=2, column=0, sticky="w", padx=20, pady=5)    
+        self.check_pulse .grid(row=0, column=1, sticky="w", padx=20, pady=5)    
+        self.check_adobe.grid(row=1, column=1, sticky="w", padx=20, pady=5)    
         self.check_olimpia.grid(row=2, column=1, sticky="w", padx=20, pady=5)
  
-        # Botón de ejecución
-        boton_ejecutar = tk.Button(self.frame_remediacion, text="Ejecutar", font=("Arial", 12), bg="#4a90e2", fg="white", command=self.ejecutar_remediacion)
-        boton_ejecutar.grid(row=3, column=0, columnspan=2, pady=20)
  
-        self.result_text = tk.Text(self.frame_contenido, height=10, width=80, font=("Arial", 12), wrap="word")
-        self.result_text.pack(pady=10)
- 
+        boton_ejecutar = tk.Button(self.frame_contenido, text= "Ejecutar", font=("Arial", 12), bg="#4a90e2", fg="white", command=self.ejecutar_remediacion)
+        boton_ejecutar.grid(pady=20)
  
     def ejecutar_remediacion(self):
         if self.check_aranda_var.get():
