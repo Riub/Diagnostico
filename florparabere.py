@@ -93,21 +93,21 @@ turtle.pensize(1)
 center_radius = math.sqrt(159) * 3  
 draw_flower(center_radius)
 
-turtle.fillcolor("saddlebrown") 
+turtle.fillcolor("#F38919") 
 turtle.pencolor("black")  
 turtle.begin_fill()
 
 for i in range(160):
-    r = math.sqrt(i) * 3 
-    theta = i * phi  
-    x = r * math.cos(theta)
-    y = r * math.sin(theta)
+    r = math.sqrt(i) * 3  
+    theta = i * phi 
+    x = r * math.cos(theta)  
+    y = r * math.sin(theta)  
     
     turtle.penup()
-    turtle.goto(x, y)
-    turtle.setheading(i)
+    turtle.goto(x, y) 
+    turtle.setheading(math.degrees(theta)) 
     turtle.pendown()
-    turtle.stamp()  
+    turtle.stamp() 
 turtle.end_fill()
 
 turtle.hideturtle()
@@ -116,14 +116,18 @@ turtle.goto(0, 350)
 turtle.pendown()
 turtle.color("white") 
 turtle.write("Para mi princesa hermosa", align="center", font=("Dancing Script", 11, "normal"))
-
 turtle.penup()
 turtle.goto(0, -300)
 turtle.pendown()
-turtle.write("Te amo como las vacas\n Muuuuuuuuucho <3", align="center", font=("Dancing Script", 11, "normal"))
-turtle.hideturtle()
+turtle.write("Te amo como las vacas", align="center", font=("Dancing Script", 11, "normal"))
 
-draw_random_small_hearts(30)  
-stamp_random_stars(30)   
+
+turtle.penup()
+turtle.goto(0, -320) 
+turtle.pendown()
+turtle.write("Muuuuuuuuucho <3", align="center", font=("Dancing Script", 11, "normal"))
+
+draw_random_small_hearts(50)  
+stamp_random_stars(50)   
 
 turtle.done()

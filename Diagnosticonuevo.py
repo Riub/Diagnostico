@@ -85,8 +85,22 @@ class MainWindow(tk.Tk):
             self.label_estado.pack(fill="x", pady=10)
  
         if not hasattr(self, 'campo_info') or not self.campo_info.winfo_exists():
-            self.campo_info = tk.Text(self.frame_contenido, height=15, bg="#e0e0e0", font=("Arial", 10))
-            self.campo_info.pack(fill="both", expand=True, pady=10)
+            # Crear el frame_texto que contendrá el campo_info y la scrollbar
+            frame_texto = tk.Frame(self.frame_contenido)
+            frame_texto.pack(fill="both", expand=True, pady=10)
+
+            # Crear la barra de desplazamiento y asociarla al frame_texto
+            scrollbar = tk.Scrollbar(frame_texto)
+            scrollbar.pack(side="right", fill="y")
+
+            # Crear campo_info dentro del frame_texto y asociarlo a la barra de desplazamiento
+            self.campo_info = tk.Text(frame_texto, height=15, bg="#e0e0e0", font=("Arial", 10), yscrollcommand=scrollbar.set)
+            self.campo_info.pack(side="left", fill="both", expand=True)
+
+            # Configurar la barra de desplazamiento para el campo de texto
+            scrollbar.config(command=self.campo_info.yview)
+
+            # Configurar los estilos del texto
             self.campo_info.tag_configure('red', foreground='red')
             self.campo_info.tag_configure('green', foreground='green')
  
@@ -427,22 +441,26 @@ class MainWindow(tk.Tk):
  
     def obtener_gateway(self):
         try:
-            resultado = subprocess.check_output("ipconfig", text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            
+            comando = "Get-NetIPConfiguration | Select-Object InterfaceAlias,@{Name='NextHop';Expression={$_.IPv4DefaultGateway.NextHop}}"
+            resultado = subprocess.check_output(["powershell", "-Command", comando], text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            
             gateways = {}
-            adaptador = None
             for linea in resultado.splitlines():
-                if "Adaptador" in linea or "adapter" in linea:
-                    adaptador = linea.split(" ")[-1].strip(":")
-                if adaptador and ("Puerta de enlace predeterminada" in linea or "Default Gateway" in linea):
-                    partes = linea.split(":")
-                    if len(partes) > 1:
-                        gateway = partes[1].strip()
-                        if gateway:
-                            gateways[adaptador] = gateway
-                            adaptador = None  
+                if linea.strip():  
+                    partes = linea.split()
+                    if len(partes) == 2:
+                        adaptador = partes[0]  
+                        gateway = partes[1]
+                        gateways[adaptador] = gateway
+            
             return gateways
+            
         except subprocess.CalledProcessError:
             return {}
+
+
+
        
     def obtener_datos_red_directamente(self):
         direcciones_interfaces_red = psutil.net_if_addrs()
@@ -635,23 +653,29 @@ class MainWindow(tk.Tk):
             os.path.join(os.environ.get('SystemRoot'), 'Temp'),
             os.path.join(os.environ.get('USERPROFILE'), 'AppData', 'Local', 'Temp')
         ]
- 
+
         archivos_eliminados = 0
         carpetas_eliminadas = 0
- 
+
+        # Rutas de caché de Edge y Chrome
+        browser_cache_dirs = [
+            os.path.join(os.environ.get('LOCALAPPDATA'), 'Google', 'Chrome', 'User Data', 'Default', 'Cache'),
+            os.path.join(os.environ.get('LOCALAPPDATA'), 'Microsoft', 'Edge', 'User Data', 'Default', 'Cache')
+        ]
+
         # Comandos 'attrib' para eliminar los atributos de oculto y sistema antes de borrar
         ocultar_atributos_cmds = [
             f'attrib -h -s "{os.environ.get("USERPROFILE")}\\CONFIG~1"',
             f'attrib -h -s "{os.environ.get("USERPROFILE")}\\CONFIG~1\\Archivos temporales de Internet"',
             f'attrib -h -s "{os.environ.get("USERPROFILE")}\\CONFIG~1\\Archivos temporales de Internet\\Content.IE5"'
         ]
- 
+
         for cmd in ocultar_atributos_cmds:
             try:
                 subprocess.run(cmd, shell=True, check=True)
             except subprocess.CalledProcessError as e:
                 print(f"Error al ejecutar {cmd}: {e}")
- 
+
         for temp_dir in temp_dirs:
             if temp_dir and os.path.exists(temp_dir):
                 for root, dirs, files in os.walk(temp_dir):
@@ -663,7 +687,7 @@ class MainWindow(tk.Tk):
                             archivos_eliminados += 1
                         except Exception as e:
                             print(f"No se pudo eliminar el archivo: {file_path}. Error: {e}")
- 
+
                     # Eliminar carpetas vacías
                     for dir in dirs:
                         dir_path = os.path.join(root, dir)
@@ -672,45 +696,38 @@ class MainWindow(tk.Tk):
                             carpetas_eliminadas += 1
                         except Exception as e:
                             print(f"No se pudo eliminar la carpeta: {dir_path}. Error: {e}")
- 
-        # Eliminar archivos específicos con 'del' y 'rmdir'
-        eliminar_cmds = [
-            f'del /S /Q /F "{os.environ.get("USERPROFILE")}\\CONFIG~1\\Archivos temporales de Internet\\Content.IE5"',
-            f'del /S /Q /F "{os.environ.get("USERPROFILE")}\\CONFIG~1\\Archivos temporales de Internet\\Content.IE5\\index.dat"',
-            f'rmdir /Q /S "{os.environ.get("USERPROFILE")}\\AppData\\Local\\Temp"',
-            f'del /S /Q /F "{os.environ.get("SystemRoot")}\\Temp\\."',
-            f'del /S /Q /F "C:\\Temp\\."',
-            f'del /S /Q /F "C:\\Windows\\Prefetch\\."'
-        ]
- 
-        for cmd in eliminar_cmds:
-            try:
-                subprocess.run(cmd, shell=True, check=True)
-            except subprocess.CalledProcessError as e:
-                print(f"Error al ejecutar {cmd}: {e}")
- 
+
+        # Limpiar caché de Chrome y Edge
+        for cache_dir in browser_cache_dirs:
+            if cache_dir and os.path.exists(cache_dir):
+                try:
+                    shutil.rmtree(cache_dir)
+                    carpetas_eliminadas += 1
+                except Exception as e:
+                    print(f"No se pudo eliminar el caché del navegador: {cache_dir}. Error: {e}")
+
         # Vaciar la papelera de reciclaje
         try:
             subprocess.run('PowerShell -Command "Clear-RecycleBin -Force"', shell=True, check=True)
             print("Papelera de reciclaje vaciada.")
         except subprocess.CalledProcessError as e:
             print(f"Error al vaciar la papelera de reciclaje: {e}")
- 
+
         # Restaurar atributos de oculto y sistema después de borrar
         restaurar_atributos_cmds = [
             f'attrib +h +s "{os.environ.get("USERPROFILE")}\\CONFIG~1\\Archivos temporales de Internet\\Content.IE5"',
             f'attrib +h +s "{os.environ.get("USERPROFILE")}\\CONFIG~1\\Archivos temporales de Internet"',
             f'attrib +h +s "{os.environ.get("USERPROFILE")}\\CONFIG~1"'
         ]
- 
+
         for cmd in restaurar_atributos_cmds:
             try:
                 subprocess.run(cmd, shell=True, check=True)
             except subprocess.CalledProcessError as e:
                 print(f"Error al ejecutar {cmd}: {e}")
- 
+
         messagebox.showinfo("Completado", f"Eliminados {archivos_eliminados} archivos temporales.\nEliminadas {carpetas_eliminadas} carpetas temporales.")
- 
+
     def cambiar_proxy(self):        
         try:
             registro = winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER)            
